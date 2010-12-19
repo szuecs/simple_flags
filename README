@@ -1,0 +1,76 @@
+Einreichen von Flaggen, um auto Abgabe zu nutzen:
+- liest aus Dateien von $SRC, z.B. src/
+- erwartet Dateiendung .txt für eingereichte Flaggendateien in $SRC
+
+Submitter-Person:
+- muss die Funktion submit() implementieren und Arbeitsweise verstehen
+- Lies den Code von unten nach oben. Implementierung nach Clean Code immer auf einer Abstraktionsebene.
+
+Arbeitsweise:
+- benutzt pipe nach sort|uniq als Vorfilter
+- Flaggen werden gechunked in Chunk-Dateien mit maximaler Anzahl von Flaggen MAX_CHUNK
+- Eine Schleife über alle Chunk-Dateien ruft für Contest abhängige Implementierung die Funktion submit() mit Chunk-Datei Parameter auf, so dass cat $1 | nc ..., d.h. eine Abgabe relativ einfach sein sollte.
+- Das Verfahren beinhaltet ein staging Prozesszyklus: src -> tmp -> stage -> done
+- schon abgegebene Flaggen werden an der Existenz einer Datei in $DONE/ mit der md5 Summer über der einzelnen Flagge erkannt (IIRC Flo style)
+
+lokal Testen:
+1. erzeuge Flaggendateien in $SRC/
+2. Referee Bot starten, z.B.
+  $ /usr/bin/nc -kl 127.0.0.1 12345  # OSX (FreeBSD?) netcat
+3. submitter starten:
+  $ ./simple_flags.sh --test src/file01.txt
+
+
+# Beispiel submitter
+## --test Option
+$ ./simple_flags.sh --test src/file01.txt
+SUBMIT src/file01.txt.test
+You should remove src/file01.txt and src/file01.txt.test yourself.
+$ 
+## normaler Lauf
+$ ./simple_flags.sh
+SUBMIT staged/do_not_touch_my_flags_chunk.0
+SUBMIT staged/do_not_touch_my_flags_chunk.1
+SUBMIT staged/do_not_touch_my_flags_chunk.2
+SUBMIT staged/do_not_touch_my_flags_chunk.3
+SUBMIT staged/do_not_touch_my_flags_chunk.4
+submitted: 10 flags
+$ 
+## daemon mode
+$ ./simple_flags.sh --daemon
+SUBMIT staged/do_not_touch_my_flags_chunk.0
+SUBMIT staged/do_not_touch_my_flags_chunk.1
+SUBMIT staged/do_not_touch_my_flags_chunk.2
+SUBMIT staged/do_not_touch_my_flags_chunk.3
+SUBMIT staged/do_not_touch_my_flags_chunk.4
+submitted: 10 flags
+
+# Beispiel fake referee aka submitterbot
+$ /usr/bin/nc -kl 127.0.0.1 12345
+team: ENOFLAG    
+bar03
+bar04
+foo
+foo1
+                  # <-- --test beendet
+team: ENOFLAG
+bar
+bar01
+team: ENOFLAG
+bar02
+bar03
+team: ENOFLAG
+bar04
+bar05
+team: ENOFLAG
+foo
+foo1
+team: ENOFLAG
+foo2
+foo3
+                  # <-- nomaler Lauf beendet
+...
+
+F.A.Q: 
+You are unsure if you are allowed to use or modify this software? 
+See LICENSE file
