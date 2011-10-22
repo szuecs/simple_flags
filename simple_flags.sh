@@ -6,8 +6,9 @@ EXT="txt"       # YOU have to add this file extension on your flagfiles
 SRC="src"       # here YOU submit you flagfiles
 MAX_CHUNK=2     # MAX_CHUNK flags to submit at once to the referee bot
 
-# $1 ist eine Datei mit abzugebenen Flaggen mit maximaler Anzahl von 
-# $MAX_CHUNK Flaggen. Hier kann man dann telent oder nc verwenden.
+# $1 is a file that contains at most $MAX_CHUNK flags to submit. 
+# This is just an example!
+# You should write this function during the contest. 
 function submit () {
   echo "SUBMIT $1"
   nc 127.0.0.1 12345 <<HERE
@@ -101,18 +102,50 @@ function main () {
   submit_flags
 
   mv $TMP/*.$EXT $SAFE
-  rm -f $TRASH/*
   cat $RESULT
+  rm -f $TRASH/*
+  #rm -f $TRASH/.*
+}
+
+function daemon_main () {
+        if [ "$(ls -A $SRC/*.$EXT)" ]; then
+            mv $SRC/*.$EXT $TMP
+            create_and_check_submit_file
+            submit_flags
+        
+            mv $TMP/*.$EXT $SAFE
+            cat $RESULT
+            rm -f $TRASH/*
+            #rm -f $TRASH/.*
+        else
+            sleep 10
+        fi
 }
 
 case $1 in
-  --test )
-    cat $2 | sort | uniq >$2.test
-    submit $2.test
-    echo "You should remove $2 and $2.test yourself."
+  --help)
+        echo "$0 [--daemon] [--test <file>] 
+        --test <file> # Submit flags of the given file. 
+        --daemon      # Daemon mode, to run the flag submitter
+"
     ;;
-  --daemon
-    while 1
+  --test )
+        if [ -s $2 ]; then
+            cat $2 | sort | uniq >$2.test
+            submit $2.test
+            echo "You should remove $2 and $2.test yourself."
+        else
+            echo "${2} is empty"
+        fi
+    ;;
+  --daemon)
+    create_all_dir
+    while [ 1 ]; do
+        daemon_main
+        sleep 60
+        echo "awake, next run.."
+    done;
+    ;;
     * )
     main
     ;;
